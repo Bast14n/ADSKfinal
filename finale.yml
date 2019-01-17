@@ -36,6 +36,7 @@
   vars:
     nginx_path: 18.184.175.90 
     app_private_path: 172.31.24.121
+    metrics_storage_ip: 172.31.23.103
   tasks:
     - yum:
         name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -51,4 +52,38 @@
     - service:
         name: nginx
         state: restarted
-    
+    - yum:
+        name: python2-certbot-nginx
+        state: present
+    - name: "install telegraph"
+      yum:
+        name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
+        state: present
+    - template:
+       src: template/telegraf.conf
+       dest: /etc/telegraf/telegraf.conf
+    - service:
+       name: telegraf
+       state: restarted
+
+- hosts: metrics_storage
+  become: yes
+  tasks:
+   - name: "install influxdb"
+     yum:
+      name: https://dl.influxdata.com/influxdb/releases/influxdb-1.7.1.x86_64.rpm
+      state: present
+   - service:
+      name: influxdb
+      state: restarted
+      
+- hosts: grafana
+  become: yes
+  tasks:
+   - name: "install grafana"
+     yum: 
+      name: https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-5.3.4-1.x86_64.rpm
+      state: present
+   - service:
+      name: grafana-server
+      state: restarted
