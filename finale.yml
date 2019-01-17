@@ -5,6 +5,7 @@
     jar_location: ../studentCrud/target/studentcrudapp-0.0.1-SNAPSHOT.jar
     app_location: /opt/studentapp/studentapp.jar
     app_user: studentapp
+    metrics_storage_ip: 172.31.23.193
   tasks:
     - name: "install jre"
       yum:
@@ -30,13 +31,20 @@
         name: "studentapp.service"
         daemon_reload: yes
         state: restarted
+    - name: "install telegraph"
+      yum:
+        name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
+        state: present
+    - template:
+        src: template/telegraf.conf
+        dest: /etc/telegraf/telegraf.conf
+    - service:
+        name: telegraf
+        state: restarted
+    
 
 - hosts: proxy_nodes
   become: yes
-  vars:
-    nginx_path: 18.184.175.90 
-    app_private_path: 172.31.24.121
-    metrics_storage_ip: 172.31.23.103
   tasks:
     - yum:
         name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -52,38 +60,49 @@
     - service:
         name: nginx
         state: restarted
-    - yum:
-        name: python2-certbot-nginx
-        state: present
-    - name: "install telegraph"
-      yum:
-        name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
-        state: present
-    - template:
-       src: template/telegraf.conf
-       dest: /etc/telegraf/telegraf.conf
-    - service:
-       name: telegraf
-       state: restarted
+    
 
 - hosts: metrics_storage
   become: yes
   tasks:
-   - name: "install influxdb"
-     yum:
+  - yum:
       name: https://dl.influxdata.com/influxdb/releases/influxdb-1.7.1.x86_64.rpm
       state: present
-   - service:
+  - service:
       name: influxdb
       state: restarted
-      
-- hosts: grafana
-  become: yes
-  tasks:
-   - name: "install grafana"
-     yum: 
+  - name: "create databa on "
+    shell: "curl -i -XPOST http://localhost:8086/query --data-urlencode 'q=CREATE DATABASE metrics'"
+    
+  - name: "install grafana"
+    yum:
       name: https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-5.3.4-1.x86_64.rpm
       state: present
-   - service:
+      
+  - service:
       name: grafana-server
       state: restarted
+
+  - name: Create influxdb datasource
+    grafana_datasource:
+      name: "my_influx"
+      grafana_url: "http://127.0.0.1:8080"
+      grafana_user: "admin"
+      grafana_password: "admin"
+      org_id: "1"
+      ds_type: "influxdb"
+      url: "http://localhost:8086"
+      database: "metrics"
+  - copy:
+      src: dashboard/system_load.json
+      dest: /tmp/my_dashboard.json
+  - name: Import Grafana dashboard
+    grafana_dashboard:
+      grafana_url: "http://127.0.0.1:8080"
+      grafana_user: "admin"
+      grafana_password: "admin"
+      state: present
+      message: Updated by ansible
+      overwrite: yes
+      path: /tmp/my_dashboard.json
+      
