@@ -1,0 +1,12 @@
+[Unit]
+Description=Student CRUD app
+After=network-online.target
+
+[Service]
+Type=simple
+User=studentapp
+ExecStart=/usr/bin/java -jar {{app_location}}
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
