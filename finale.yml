@@ -45,6 +45,9 @@
 
 - hosts: proxy_nodes
   become: yes
+  vars:
+    email: sebastian.surowka@gmail.com
+    domain: czolo.ml
   tasks:
     - yum:
         name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
@@ -60,49 +63,53 @@
     - service:
         name: nginx
         state: restarted
+    - yum:
+        name: python2-certbot-nginx
+        state: present
+    - shell: "sudo certbot -i nginx -d '{{domain}}' --nginx -m '{{email}}' --agree-tos --redirect"
     
 
-- hosts: metrics_storage
-  become: yes
-  tasks:
-  - yum:
-      name: https://dl.influxdata.com/influxdb/releases/influxdb-1.7.1.x86_64.rpm
-      state: present
-  - service:
-      name: influxdb
-      state: restarted
-  - name: "create databa on "
-    shell: "curl -i -XPOST http://localhost:8086/query --data-urlencode 'q=CREATE DATABASE metrics'"
+# - hosts: metrics_storage
+#   become: yes
+#   tasks:
+#   - yum:
+#       name: https://dl.influxdata.com/influxdb/releases/influxdb-1.7.1.x86_64.rpm
+#       state: present
+#   - service:
+#       name: influxdb
+#       state: restarted
+#   - name: "create databa on "
+#     shell: "curl -i -XPOST http://localhost:8086/query --data-urlencode 'q=CREATE DATABASE metrics'"
     
-  - name: "install grafana"
-    yum:
-      name: https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-5.3.4-1.x86_64.rpm
-      state: present
+#   - name: "install grafana"
+#     yum:
+#       name: https://s3-us-west-2.amazonaws.com/grafana-releases/release/grafana-5.3.4-1.x86_64.rpm
+#       state: present
       
-  - service:
-      name: grafana-server
-      state: restarted
+#   - service:
+#       name: grafana-server
+#       state: restarted
 
-  - name: Create influxdb datasource
-    grafana_datasource:
-      name: "my_influx"
-      grafana_url: "http://127.0.0.1:8080"
-      grafana_user: "admin"
-      grafana_password: "admin"
-      org_id: "1"
-      ds_type: "influxdb"
-      url: "http://localhost:8086"
-      database: "metrics"
-  - copy:
-      src: dashboard/system_load.json
-      dest: /tmp/my_dashboard.json
-  - name: Import Grafana dashboard
-    grafana_dashboard:
-      grafana_url: "http://127.0.0.1:8080"
-      grafana_user: "admin"
-      grafana_password: "admin"
-      state: present
-      message: Updated by ansible
-      overwrite: yes
-      path: /tmp/my_dashboard.json
+#   - name: Create influxdb datasource
+#     grafana_datasource:
+#       name: "my_influx"
+#       grafana_url: "http://127.0.0.1:8080"
+#       grafana_user: "admin"
+#       grafana_password: "admin"
+#       org_id: "1"
+#       ds_type: "influxdb"
+#       url: "http://localhost:8086"
+#       database: "metrics"
+#   - copy:
+#       src: dashboard/system_load.json
+#       dest: /tmp/my_dashboard.json
+#   - name: Import Grafana dashboard
+#     grafana_dashboard:
+#       grafana_url: "http://127.0.0.1:8080"
+#       grafana_user: "admin"
+#       grafana_password: "admin"
+#       state: present
+#       message: Updated by ansible
+#       overwrite: yes
+#       path: /tmp/my_dashboard.json
       
