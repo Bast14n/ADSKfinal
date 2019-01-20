@@ -1,72 +1,73 @@
 ---
-- hosts: app_nodes
-  become: yes
-  vars:
-    jar_location: ../studentCrud/target/studentcrudapp-0.0.1-SNAPSHOT.jar
-    app_location: /opt/studentapp/studentapp.jar
-    app_user: studentapp
-    metrics_storage_ip: 172.31.23.193
-  tasks:
-    - name: "install jre"
-      yum:
-        name: java-1.8.0-openjdk
-        state: present
-    - name: "create path"
-      file:
-        path: /opt/studentapp
-        state: directory
-    - name: "copy .jar to remote machine"
-      copy:
-        src: "{{jar_location}}"
-        dest: "{{app_location}}"
-    - name: "create user for service"
-      user:
-        name: "{{app_user}}"
-    - name: "copy systemd config"
-      template:
-        src: template/studentapp.service
-        dest: /etc/systemd/system/studentapp.service
-    - name: "start service"
-      systemd:
-        name: "studentapp.service"
-        daemon_reload: yes
-        state: restarted
-    - name: "install telegraph"
-      yum:
-        name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
-        state: present
-    - template:
-        src: template/telegraf.conf
-        dest: /etc/telegraf/telegraf.conf
-    - service:
-        name: telegraf
-        state: restarted
+# - hosts: app_nodes
+#   become: yes
+#   vars:
+#     jar_location: ../studentCrud/target/studentcrudapp-0.0.1-SNAPSHOT.jar
+#     app_location: /opt/studentapp/studentapp.jar
+#     app_user: studentapp
+#     metrics_storage_ip: 172.31.23.78
+#   tasks:
+#     - name: "install jre"
+#       yum:
+#         name: java-1.8.0-openjdk
+#         state: present
+#     - name: "create path"
+#       file:
+#         path: /opt/studentapp
+#         state: directory
+#     - name: "copy .jar to remote machine"
+#       copy:
+#         src: "{{jar_location}}"
+#         dest: "{{app_location}}"
+#     - name: "create user for service"
+#       user:
+#         name: "{{app_user}}"
+#     - name: "copy systemd config"
+#       template:
+#         src: template/studentapp.service
+#         dest: /etc/systemd/system/studentapp.service
+#     - name: "start service"
+#       systemd:
+#         name: "studentapp.service"
+#         daemon_reload: yes
+#         state: restarted 
+#         enabled: yes TO DO
+#     - name: "install telegraph"
+#       yum:
+#         name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
+#         state: present
+#     - template:
+#         src: template/telegraf.conf
+#         dest: /etc/telegraf/telegraf.conf
+#     - service:
+#         name: telegraf
+#         state: restarted
     
 
-- hosts: proxy_nodes
-  become: yes
-  vars:
-    email: sebastian.surowka@gmail.com
-    domain: czolo.ml
-  tasks:
-    - yum:
-        name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-        state: present
-    - name: Install nginx web server
-      yum:
-        name: nginx
-        state: present
-    - name: Add nginx.conf file
-      template:
-        src: template/temp_nginx.conf
-        dest: /etc/nginx/conf.d/my_nginx.conf
-    - service:
-        name: nginx
-        state: restarted
-    - yum:
-        name: python2-certbot-nginx
-        state: present
-    - shell: "sudo certbot -i nginx -d '{{domain}}' --nginx -m '{{email}}' --agree-tos --redirect"
+# - hosts: proxy_nodes
+#   become: yes
+#   vars:
+#     email: sebastian.surowka@gmail.com
+#     domain: czolo.ml
+#   tasks:
+#     - yum:
+#         name: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+#         state: present
+#     - name: Install nginx web server
+#       yum:
+#         name: nginx
+#         state: present
+#     - name: Add nginx.conf file
+#       template:
+#         src: template/temp_nginx.conf
+#         dest: /etc/nginx/conf.d/my_nginx.conf
+#     - service:
+#         name: nginx
+#         state: restarted
+#     - yum:
+#         name: python2-certbot-nginx
+#         state: present
+#     - shell: "sudo certbot -i nginx -d '{{domain}}' --nginx -m '{{email}}' --agree-tos --redirect"
     
 
 # - hosts: metrics_storage
@@ -93,19 +94,24 @@
 #   - name: Create influxdb datasource
 #     grafana_datasource:
 #       name: "my_influx"
-#       grafana_url: "http://127.0.0.1:8080"
+#       grafana_url: "http://localhost:3000"
 #       grafana_user: "admin"
 #       grafana_password: "admin"
 #       org_id: "1"
 #       ds_type: "influxdb"
 #       url: "http://localhost:8086"
 #       database: "metrics"
-#   - copy:
+#   - name: "create path"
+#     file:
+#       path: /temp
+#       state: directory
+#   - name: Copy grafana dashboard 
+#     copy:
 #       src: dashboard/system_load.json
 #       dest: /tmp/my_dashboard.json
 #   - name: Import Grafana dashboard
 #     grafana_dashboard:
-#       grafana_url: "http://127.0.0.1:8080"
+#       grafana_url: "http://localhost:3000"
 #       grafana_user: "admin"
 #       grafana_password: "admin"
 #       state: present
@@ -113,3 +119,42 @@
 #       overwrite: yes
 #       path: /tmp/my_dashboard.json
       
+- hosts: db
+  become: yes
+  tasks:
+  - name: "Install mysql server"
+    yum:
+      name: "{{ packages }}"
+      state: latest
+    vars:
+     packages:
+       - mariadb
+       - mariadb-server
+  - yum:
+      name: MySQL-python
+      state: present
+  - service:
+      name: mariadb
+      state: started
+  - name: update mysql root password for all root accounts
+    mysql_user:
+      name: root
+      host: "127.0.0.1"
+      password: "passwd"
+      login_user: root
+      login_password: "passwd"
+      check_implicit_admin: yes
+      priv: "*.*:ALL,GRANT"  
+  - name: "Create db"
+    mysql_db:
+      name: studentCrud
+      state: present
+  - name: Copy database dump file
+    copy:
+      src: template/scprit.sql
+      dest: /tmp/scprit.sql
+  - name: "Import table"
+    mysql_db:
+      name: studentCrud
+      state: import
+      target: /tmp/scprit.sql

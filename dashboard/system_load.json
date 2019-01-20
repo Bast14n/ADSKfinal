@@ -23,7 +23,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "my-influx",
+      "datasource": "my_influx",
       "fill": 1,
       "gridPos": {
         "h": 9,
