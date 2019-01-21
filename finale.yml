@@ -22,6 +22,10 @@
 #     - name: "create user for service"
 #       user:
 #         name: "{{app_user}}"
+#     - name: "create path"
+#       file:
+#         path: /etc/systemd/system
+#         state: directory
 #     - name: "copy systemd config"
 #       template:
 #         src: template/studentapp.service
@@ -29,9 +33,9 @@
 #     - name: "start service"
 #       systemd:
 #         name: "studentapp.service"
-#         daemon_reload: yes
-#         state: restarted 
-#         enabled: yes TO DO
+#         # daemon_reload: yes
+#         state: restarted
+#         enabled: yes
 #     - name: "install telegraph"
 #       yum:
 #         name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
@@ -42,7 +46,54 @@
 #     - service:
 #         name: telegraf
 #         state: restarted
-    
+- hosts: app_nodes
+  become: yes
+  vars:
+    jar_location: ../studentCrud/target/studentcrudapp-0.0.1-SNAPSHOT.jar
+    app_location: /opt/studentapp/studentapp.jar
+    app_user: studentapp
+    # metrics_storage_ip: 172.31.23.78
+  tasks:
+  - name: "remove java 1.7"
+    yum:
+      name: java-1.7.0-openjdk
+      state: absent
+  - name: "install jre"
+    yum:
+      name: java-1.8.0-openjdk
+      state: present
+  - name: "create path"
+    file:
+      path: /opt/studentapp
+      state: directory
+  - name: "copy .jar to remote machine"
+    copy:
+      src: "{{jar_location}}"
+      dest: "{{app_location}}"
+  - name: "create user for service"
+    user:
+      name: "{{app_user}}"
+  - name: "copy systemd config"
+    template:
+      src: template/studentapp.service
+      dest: /etc/systemd/system/studentapp.service
+  - name: "start service"
+    systemd:
+      name: "studentapp.service"
+      daemon_reload: yes
+      enabled: yes #TODO: ask
+      state: restarted
+  - name: "install telegraf"
+    yum:
+      name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
+      state: present
+  - template:
+      src: template/telegraf.conf
+      dest: /etc/telegraf/telegraf.conf
+  - service:
+      name: telegraf
+      state: restarted
+
 
 # - hosts: proxy_nodes
 #   become: yes
@@ -129,25 +180,25 @@
       name: mongodb-org
       state: present
   - service: name=mongod state=started
-  # - copy:
-  #     src: template/get-pip.py
-  #     dest: /tmp/get-pip.py
-  # - name: install scprit
-  #   command: python  /tmp/get-pip.py
-  # - package:
-  #     name: python-pip
+ 
+  # - easy_install:
+  #     name: pip
   #     state: latest
-  - easy_install:
-      name: pip
-      state: latest
-  -  pip: name=pymongo state=latest use_mirrors=no
+  # - pip: name=pymongo state=latest use_mirrors=no
   - mongodb_user:
-      login_port: 27017
+      database: admin
+      # login_port: 27017
       name: admin
-      password: admin
-      database: mongo
-      state: present
+      password: 1234
       roles: root
+      state: present
+  # - mongodb_user:
+  #     database: mongo
+  #     # login_port: 27017
+  #     name: sebix
+  #     password: 1234
+  #     state: present
+  
   
   # - name: "Install mysql server"
   #   yum:
