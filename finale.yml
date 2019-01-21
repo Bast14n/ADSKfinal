@@ -122,39 +122,67 @@
 - hosts: db
   become: yes
   tasks:
-  - name: "Install mysql server"
-    yum:
-      name: "{{ packages }}"
-      state: latest
-    vars:
-     packages:
-       - mariadb
-       - mariadb-server
+  - copy:
+      src: template/mongodb-org-4.0.repo
+      dest: /etc/yum.repos.d/mongodb-org-4.0.repo
   - yum:
-      name: MySQL-python
+      name: mongodb-org
       state: present
-  - service:
-      name: mariadb
-      state: started
-  - name: update mysql root password for all root accounts
-    mysql_user:
-      name: root
-      host: "127.0.0.1"
-      password: "passwd"
-      login_user: root
-      login_password: "passwd"
-      check_implicit_admin: yes
-      priv: "*.*:ALL,GRANT"  
-  - name: "Create db"
-    mysql_db:
-      name: studentCrud
+  - service: name=mongod state=started
+  # - copy:
+  #     src: template/get-pip.py
+  #     dest: /tmp/get-pip.py
+  # - name: install scprit
+  #   command: python  /tmp/get-pip.py
+  # - package:
+  #     name: python-pip
+  #     state: latest
+  - easy_install:
+      name: pip
+      state: latest
+  -  pip: name=pymongo state=latest use_mirrors=no
+  - mongodb_user:
+      login_port: 27017
+      name: admin
+      password: admin
+      database: mongo
       state: present
-  - name: Copy database dump file
-    copy:
-      src: template/scprit.sql
-      dest: /tmp/scprit.sql
-  - name: "Import table"
-    mysql_db:
-      name: studentCrud
-      state: import
-      target: /tmp/scprit.sql
+      roles: root
+  
+  # - name: "Install mysql server"
+  #   yum:
+  #     name: "{{ packages }}"
+  #     state: latest
+  #   vars:
+  #   packages:
+  #     - mariadb
+  #     - mariadb-server
+  # - yum:
+  #     name: MySQL-python
+  #     state: present
+  # - service:
+  #     name: mariadb
+  #     state: started
+  # - name: update mysql root password for all root accounts
+  #   mysql_user:
+  #     name: root
+  #     host: "127.0.0.1"
+  #     password: "passwd"
+  #     login_user: root
+  #     login_password: "passwd"
+  #     check_implicit_admin: yes
+  #     priv: "*.*:ALL,GRANT"  
+  # - name: "Create db"
+  #   mysql_db:
+  #     name: studentCrud
+  #     state: present
+  # - name: Copy database dump file
+  #   copy:
+  #     src: template/scprit.sql
+  #     dest: /tmp/scprit.sql
+  # - name: "Import table"
+  #   mysql_db:
+  #     name: studentCrud
+  #     state: import
+  #     target: /tmp/scprit.sql
+  
