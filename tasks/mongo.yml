@@ -1,0 +1,23 @@
+---
+  - copy:
+      src: template/mongodb-org-4.0.repo
+      dest: /etc/yum.repos.d/mongodb-org-4.0.repo
+  - yum:
+      name: mongodb-org
+      state: present
+  - service: name=mongod state=started
+  - copy:
+      src: template/get-pip.py
+      dest: /tmp/get-pip.py
+  - name: install scprit
+    command: python  /tmp/get-pip.py
+  - package:
+      name: python-pip
+      state: latest 
+  - pip: name=pymongo state=latest use_mirrors=no
+  - mongodb_user:
+      database: admin
+      name: admin
+      password: 1234
+      roles: root
+      state: present

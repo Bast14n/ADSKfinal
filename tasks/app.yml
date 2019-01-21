@@ -1,0 +1,40 @@
+---  
+  - name: "remove java 1.7"
+    yum:
+      name: java-1.7.0-openjdk
+      state: absent
+  - name: "install jre"
+    yum:
+      name: java-1.8.0-openjdk
+      state: present
+  - name: "create path"
+    file:
+      path: /opt/studentapp
+      state: directory
+  - name: "copy .jar to remote machine"
+    copy:
+      src: "{{jar_location}}"
+      dest: "{{app_location}}"
+  - name: "create user for service"
+    user:
+      name: "{{app_user}}"
+  - name: "copy systemd config"
+    template:
+      src: template/studentapp.service
+      dest: /etc/systemd/system/studentapp.service
+  - name: "start service"
+    systemd:
+      name: "studentapp.service"
+      daemon_reload: yes
+      enabled: yes #TODO: ask
+      state: restarted
+  - name: "install telegraf"
+    yum:
+      name: https://dl.influxdata.com/telegraf/releases/telegraf-1.8.3-1.x86_64.rpm
+      state: present
+  - template:
+      src: template/telegraf.conf
+      dest: /etc/telegraf/telegraf.conf
+  - service:
+      name: telegraf
+      state: restarted

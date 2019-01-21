@@ -1,0 +1,26 @@
+---
+- hosts: app_nodes
+  become: yes
+  vars: 
+    jar_location: ../studentCrud/target/studentcrudapp-0.0.1-SNAPSHOT.jar
+    app_location: /opt/studentapp/studentapp.jar
+    app_user: studentapp
+    metrics_storage_ip: 172.31.30.176
+  tasks:
+    - include_tasks: tasks/app.yml
+- hosts: proxy_nodes
+  become: yes
+  vars:
+    email: sebastian.surowka@gmail.com
+    domain: czolo.ml
+    server_name: 18.195.169.212
+  tasks:
+    - include_tasks: tasks/proxy.yml
+- hosts: metrics_storage
+  become: yes
+  tasks:
+    - include_tasks: tasks/grafana.yml
+- hosts: db
+  become: yes
+  tasks:
+    - include_tasks: tasks/mongo.yml
