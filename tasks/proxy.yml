@@ -16,4 +16,4 @@
     - yum:
         name: python2-certbot-nginx
         state: present
-    # - shell: "sudo certbot -i nginx -d '{{domain}}' --nginx -m '{{email}}' --agree-tos --redirect"
+    - shell: "sudo certbot -i nginx -d '{{domain}}' --nginx -m '{{email}}' --agree-tos --redirect"
